@@ -12,7 +12,6 @@ function App(props) {
   const [longitude, setLongitude] = useState();
   // const [html, setHtml] = useState('MAP');
   const [htmlContent, setHtmlContent] = useState([]);
-  const [bigScreen, setBigScreen] = useState('');
 
 
   const setIncidentHandler = (event) => {
@@ -26,23 +25,34 @@ function App(props) {
   const setLongitudeHandler = (event) => {
     setLongitude(event)
   }
+
+  useEffect(()=> {
+    console.log("Inside Effect", incident, latitude, longitude);
+  }, [incident, latitude, longitude])
+
+
+
   const getMap = (response) => {
     const path = response;
     const pathArray = path.split("@");
-  
-    Promise.all(pathArray.map(url => axios.get(`${props.host}/get_html_file/`, { params: { url: url } })))
-    .then(responses => {
-      const htmlContents = responses.map(response => response.data);
-      const uniqueHtmlContents = htmlContents.filter(content => !content.startsWith('Error:') && !htmlContent.includes(content));
-      setHtmlContent(htmlContent => [...htmlContent, ...uniqueHtmlContents]);
-      setBigScreen(uniqueHtmlContents[0]);
-    })
-    .catch(error => console.error(error));
-  };
+    setHtmlContent([])
+    pathArray.forEach(async (url) => {
+      try {
+        setHtmlContent([])
 
-  const handleMapClick = (key) => {
-    console.log("KEY CHECK = ", key)
+        const response = await axios.get(`${props.host}/get_html_file/`, { params: { url: url } });
+        console.log("response.data = ");
+        console.log(response.data);
+        if (!response.data.startsWith('Error:') && !htmlContent.includes(response.data)) {
+          setHtmlContent(htmlContent => [...htmlContent, response.data]);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    });
   }
+
+  
 
   return (
     <div className="App">
@@ -53,7 +63,7 @@ function App(props) {
         <div>
           <Grid item xs={12}>
               <iframe
-                srcDoc={bigScreen}
+                srcDoc={htmlContent[0]}
                 title={`HTML file`}
                 width="1000"
                 height="700"
@@ -64,8 +74,7 @@ function App(props) {
           </div>
         <div style={{overflowX: "auto", display: "flex", maxWidth:'100%', margin:"0 0" }}>
           {htmlContent.map((content, index) => (
-            <Grid item xs={3} key={index} onClick={() => handleMapClick(content)}
-            >
+            <Grid item xs={3} key={index}>
               <iframe
                 key={index}
                 srcDoc={content}
@@ -74,7 +83,7 @@ function App(props) {
                 height="300"
                 frameBorder="0"
                 scrolling="no"
-                style={{ pointerEvents: "auto" }}
+                // onClick={() => handleMapClick(map)}
               />
             </Grid>
           ))}
